@@ -3,30 +3,42 @@ on: [push]
 jobs:
   build_ipa:
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Khắc phục cảnh báo Node.js cũ
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Cordova
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Cordova
         run: npm install -g cordova
+
       - name: Create App Bundle
         run: |
-          # 1. Tạo dự án mới hoàn toàn
+          # 1. Tạo dự án và thêm nền tảng
           cordova create gemini_app com.mikhail.gemini Gemini
           cd gemini_app
-          cordova platform add ios
+          cordova platform add ios --nostore
           
-          # 2. Đưa file HTML của bạn vào dự án
+          # 2. Đưa code AI của bạn vào
           cp ../index.html www/index.html
           
-          # 3. Biên dịch sơ bộ
+          # 3. Chạy lệnh chuẩn bị để tự sinh Info.plist và cấu hình
           cordova prepare ios
           
-          # 4. Đóng gói Payload cho TrollStore
+          # 4. Đóng gói theo cấu trúc TrollStore
           mkdir -p ../Payload
+          # Sử dụng thư mục www đã được tối ưu cho iOS
           cp -r platforms/ios/www ../Payload/Gemini.app
-          cp platforms/ios/Gemini/Gemini-Info.plist ../Payload/Gemini.app/Info.plist
+          # Lấy file Info.plist vừa được sinh ra tự động
+          find platforms/ios -name "*-Info.plist" -exec cp {} ../Payload/Gemini.app/Info.plist \;
           
           cd ..
           zip -r Gemini.ipa Payload
+
       - name: Export IPA
         uses: actions/upload-artifact@v4
         with:
