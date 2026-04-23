@@ -1,0 +1,36 @@
+name: Gemini AI Builder
+on: [push]
+jobs:
+  build_ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Cordova
+        run: npm install -g cordova
+      - name: Create App Bundle
+        run: |
+          # 1. Tạo dự án mới hoàn toàn
+          cordova create gemini_app com.mikhail.gemini Gemini
+          cd gemini_app
+          cordova platform add ios
+          
+          # 2. Đưa file HTML của bạn vào dự án
+          cp ../index.html www/index.html
+          
+          # 3. Biên dịch sơ bộ
+          cordova prepare ios
+          
+          # 4. Đóng gói Payload cho TrollStore
+          mkdir -p ../Payload
+          # Copy bộ khung app đã được Cordova dựng sẵn
+          cp -r platforms/ios/www ../Payload/Gemini.app
+          # Copy file Info.plist quan trọng
+          cp platforms/ios/Gemini/Gemini-Info.plist ../Payload/Gemini.app/Info.plist
+          
+          cd ..
+          zip -r Gemini.ipa Payload
+      - name: Export IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: Gemini-TrollStore-IPA
+          path: Gemini.ipa
