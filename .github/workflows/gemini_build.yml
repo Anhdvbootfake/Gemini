@@ -4,7 +4,7 @@ jobs:
   build_ipa:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Cordova
         run: npm install -g cordova
       - name: Create App Bundle
@@ -22,15 +22,13 @@ jobs:
           
           # 4. Đóng gói Payload cho TrollStore
           mkdir -p ../Payload
-          # Copy bộ khung app đã được Cordova dựng sẵn
           cp -r platforms/ios/www ../Payload/Gemini.app
-          # Copy file Info.plist quan trọng
           cp platforms/ios/Gemini/Gemini-Info.plist ../Payload/Gemini.app/Info.plist
           
           cd ..
           zip -r Gemini.ipa Payload
       - name: Export IPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Gemini-TrollStore-IPA
           path: Gemini.ipa
