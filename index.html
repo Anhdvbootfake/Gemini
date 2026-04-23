@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Gemma AI - Bản Tiêu Chuẩn</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;           
+      --sidebar-bg: #1e293b;         
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --accent: #3b82f6;             
+      --accent-hover: #2563eb;
+      --msg-user-bg: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-color); color: var(--text-main);
+      height: 100%; height: 100dvh; 
+      width: 100%; max-width: 100vw;
+      overflow-x: hidden; /* NGĂN CHẶN CUỘN NGANG HOÀN TOÀN TỪ GỐC */
+      display: flex;
+      -webkit-tap-highlight-color: transparent; 
+      background-image: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.05) 0%, transparent 40%);
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: 280px; max-width: 80vw; height: 100%;
+      background: var(--sidebar-bg); border-right: 1px solid var(--border-color);
+      display: flex; flex-direction: column;
+      transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 40; box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-header { padding: 12px; border-bottom: 1px solid var(--border-color); }
+    
+    .new-chat-btn {
+      background: linear-gradient(135deg, #3b82f6, #6366f1); color: white;
+      border: none; width: 100%; padding: 12px; border-radius: 8px;
+      font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    .conversation-list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 8px; }
+    .conv-item { display: flex; align-items: center; padding: 10px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-size: 14px;}
+    .conv-item.active { background: rgba(59, 130, 246, 0.15); color: #fff; border-left: 3px solid var(--accent); }
+    .conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
+
+    .sidebar-footer { padding: 10px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.1); }
+    .footer-btn {
+      background: none; border: none; color: var(--text-main); width: 100%; text-align: left;
+      font-size: 13px; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+    }
+    .badge { background: #10b981; font-size: 10px; padding: 2px 6px; border-radius: 20px; font-weight: bold; margin-left: auto; color: white;}
+
+    /* KHUNG TRÌNH BÀY CHAT CHÍNH - QUẢN LÝ FIX LỖI BREAK WIDTH DỌC CHO MÀN BE' */
+    .main { 
+      flex: 1; display: flex; flex-direction: column; width: 100vw; min-width: 0;
+      overflow-x: hidden; position: relative; 
+    }
+    
+    .chat-header {
+      padding: 10px 12px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;
+      background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); z-index: 10;
+    }
+    .menu-toggle { background: none; border: none; color: white; font-size: 22px; padding: 4px;}
+    .chat-title { flex: 1; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .header-btn { background: rgba(255,255,255,0.1); border: none; padding: 8px; border-radius: 6px; font-size: 14px; color: white; margin-left: 4px; }
+    
+    .messages-container { 
+      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 12px; 
+      display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth;
+    }
+    
+    .message { display: flex; gap: 8px; width: 100%; animation: fadeIn 0.3s ease; }
+    .message.user { flex-direction: row-reverse; }
+    
+    .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;}
+    .message.assistant .avatar { background: linear-gradient(135deg, #a855f7, #6366f1); }
+    .message.user .avatar { background: var(--msg-user-bg); }
+    
+    /* Thiết lập min-width 0 giúp khung con được phep nhỏ lại không nở lớn phang bẹp giao diện đè body màn hình điện thoại */
+    .bubble { 
+      min-width: 0; 
+      max-width: 88%;
+      color: #e2e8f0; font-size: 14.5px; line-height: 1.5; 
+      word-break: break-word; overflow-wrap: break-word; hyphens: auto; 
+    }
+    .message.user .bubble { background: var(--msg-user-bg); padding: 10px 14px; border-radius: 16px 16px 4px 16px; color: white;}
+    .message.assistant .bubble { padding: 4px 0 8px 0; }
+    .bubble p { margin-bottom: 10px; max-width: 100%; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;}
+    .bubble p:last-child { margin-bottom: 0; }
+
+    /* Quy tắc riêng cho bảng và đoạn Mã nguồn, phải tuột dòn trong khung và cấp quyền lướt nội quy bên trong không gây vỡ cả ứng dụng */
+    .bubble pre {
+      max-width: 100%; min-width: 0;
+      background: #0f1115; border-radius: 8px; padding: 12px; margin: 8px 0; border: 1px solid var(--border-color);
+      overflow-x: auto; white-space: pre; -webkit-overflow-scrolling: touch; font-size: 13px;
+    }
+    .bubble code { font-family: monospace; font-size: 12.5px; background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; }
+    .bubble pre code { background: none; padding: 0; border: none; white-space: inherit; }
+    
+    .bubble table { display: block; max-width: 100%; width: max-content; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; border-collapse: collapse; margin: 8px 0; }
+    .bubble th, .bubble td { border: 1px solid var(--border-color); padding: 8px; font-size: 13px; }
+    .bubble th { background: rgba(255,255,255,0.05); }
+
+    /* Khối khung thông báo xử lý Thinking Box rõ nét tách bạch chữ phân đoạn chuẩn cho UX mới */
+    .think-box { background: rgba(255,255,255,0.02); border-left: 3px solid rgba(99,102,241,0.8); padding: 8px 12px; margin-bottom: 14px; border-radius: 0 8px 8px 0;}
+    .think-box summary { cursor: pointer; color: #a5b4fc; font-weight: 500; font-size: 13.5px; user-select: none; display: flex; align-items: center; list-style:none;}
+    .think-box summary::-webkit-details-marker { display: none; }
+    .think-content { margin-top: 10px; font-size: 13.5px; color: #94a3b8; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;}
+
+    /* Thanh Bar Nhập Kí Tự Phù Hợp Fix Cho Thiết Bị Cứng */
+    .input-area-wrapper { padding: 12px; width: 100%; position: sticky; bottom: 0; background: linear-gradient(180deg, transparent 0%, rgba(15,23,42,0.98) 30%, #0f172a 100%); }
+    .input-wrapper { background: #1e293b; border-radius: 20px; display: flex; align-items: flex-end; padding: 6px 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); }
+    
+    .attach-btn { background: none; border: none; color: #cbd5e1; font-size: 20px; padding: 8px; display: flex; justify-content: center; align-items: flex-end; height: 42px;}
+    .message-input { 
+      flex: 1; border: none; background: transparent; color: white; padding: 10px 8px; max-height: 120px;
+      font-size: 16px; /* font-size bằng đúng hoặc hơn 16px cấm IOS ZOOM bàn phím lộn khung! */
+      resize: none; outline: none; line-height: 1.4;
+    }
+    
+    .send-btn { 
+      background: var(--accent); color: white; border: none; height: 38px; width: 38px; border-radius: 50%;
+      margin: 0 0 2px 6px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; font-size: 18px; box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+    .send-btn:disabled { background: #475569; box-shadow: none; opacity: 0.5; }
+
+    /* LOADING DO DOT */
+    .status-indicator { margin: 0 0 16px 40px; color: #94a3b8; font-size: 13px; font-weight: 500;}
+    .dot-flashing { display: inline-flex; align-items: center; margin-left: 4px; gap: 4px;}
+    .dot-flashing span { width: 5px; height: 5px; border-radius: 50%; background: #94a3b8; animation: fl 1s infinite alternate; }
+    .dot-flashing span:nth-child(2) { animation-delay: 0.2s; }
+    .dot-flashing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes fl { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+    /* CÁC THIẾT BỊ BẢNG PHÂN MODAL RỜI / DIALOG BOXES MOBILE MỀM RỘNG */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100;}
+    .modal.active { display: flex; animation: fadeIn 0.15s ease-out; }
+    .modal-content {
+      background: var(--sidebar-bg); border-radius: 12px; width: 92%; max-width: 360px; max-height: 85vh;
+      overflow-y: auto; padding: 20px; border: 1px solid var(--border-color);
+    }
+    .modal-content h3 { font-size: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+    
+    .input-field { width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; color: white; margin-bottom: 16px; font-size: 14.5px; }
+    .input-field:focus { outline: none; border-color: var(--accent); }
+    
+    .settings-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 14px;}
+    
+    .rag-doc-list { background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border-color); max-height: 200px; overflow-y: auto; margin-bottom: 16px; }
+    .rag-doc-item { padding: 12px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+    
+    .btn { padding: 10px; width: 100%; font-weight: 600; font-size: 14.5px; border-radius: 8px; border: none; cursor: pointer; transition: background 0.2s;}
+    .btn-secondary { background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px; }
+    .btn-primary { background: var(--accent); color: white; }
+    
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; z-index: 30;}
+    .overlay.active { display: block;}
+    
+    #file-input { display: none;}
+    .media-thumbnail { max-width: 200px; border-radius: 6px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="overlay" id="mobileOverlay"></div>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="new-chat-btn" id="newChatBtn">➕ Khởi tạo hội thoại mới</button>
+  </div>
+  <div class="conversation-list" id="conversationList"></div>
+  <div class="sidebar-footer">
+    <button class="footer-btn" id="ragManagerBtn">
+      📚 Lưu trữ cục bộ RAG <span class="badge" id="kbBadge">0</span>
+    </button>
+    <button class="footer-btn" id="settingsBtn">⚙️ Thiết lập Hệ thống / API</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="chat-header">
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="chat-title" id="chatTitleDisplay">Chưa có phiên chat</div>
+    <div class="rag-status-badge" id="ragActiveIndicator">Bật AI Đọc Text</div>
+    <div style="margin-left:auto; display:flex; gap:6px;">
+      <button class="header-btn" id="editTitleBtn">✏️</button>
+      <button class="header-btn" id="deleteChatBtn" style="color: #fb7185;">🗑️</button>
+    </div>
+  </div>
+
+  <div class="messages-container" id="messagesContainer"></div>
+
+  <div class="input-area-wrapper">
+    <div class="input-wrapper">
+      <button class="attach-btn" id="attachBtn">📎</button>
+      <input type="file" id="file-input" accept="image/*,video/*" multiple>
+      <textarea class="message-input" id="messageInput" placeholder="Nhắn tin với Trợ Lý ảo..." rows="1"></textarea>
+      <button class="send-btn" id="sendBtn">➤</button>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal">
+  <div class="modal-content">
+    <h3>Cài đặt Lõi Mô hình AI</h3>
+    <input type="password" id="apiKeyInput" class="input-field" placeholder="Mã Google Studio API Key của bạn">
+    <select id="modelSelect" class="input-field">
+      <option value="gemma-2-27b-it">Gemma 2 27B</option>
+      <option value="gemma-4-26b-a4b-it">Gemma 4 26B (Beta)</option>
+      <option value="gemma-4-31b-it">Gemma 4 31B (Mô hình Cao nhất)</option>
+      <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
+      <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+      <option value="gemini-2.5-flash-thinking-exp">Gemini Flash Thinking Exp (Bản Tư duy Suy Luận Lớn)</option>
+    </select>
+    
+    <div class="settings-row">
+      <label>Độ bay bổng, sáng tạo chữ:</label>
+      <div style="display:flex; align-items:center; gap: 8px;">
+        <input type="range" id="temperatureRange" min="0" max="1" step="0.1" value="0.7">
+        <span id="tempValue" style="min-width:25px; font-weight: bold; font-size: 15px;">0.7</span>
+      </div>
+    </div>
+    
+    <div class="settings-row" style="margin-top:0;">
+      <label for="googleSearchCheckbox">Công cụ Gọi thông tin Search Mới Live</label>
+      <input type="checkbox" id="googleSearchCheckbox" style="width: 20px; height: 20px;">
+    </div>
+
+    <h3 style="margin-top: 24px;">Giao thoa Dữ Liệu</h3>
+    <button class="btn btn-secondary" id="exportDataBtn">📥 Lưu File Đồng Bộ Tất cả (.json)</button>
+    <button class="btn btn-secondary" id="importDataBtn" style="background:#2563eb; margin-bottom: 24px;">📤 Tải vào từ Backup (.json)</button>
+    <input type="file" id="importFileInput" accept=".json" style="display:none;">
+
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-secondary" style="flex:1; margin-bottom:0;" onclick="document.getElementById('settingsModal').classList.remove('active')">Huỷ Bỏ</button>
+      <button class="btn btn-primary" style="flex:2;" id="saveSettingsBtn">Đóng Lưu Tích Trữ Cập Nhật</button>
+    </div>
+  </div>
+</div>
+
+<div id="ragModal" class="modal">
+  <div class="modal-content">
+    <h3>
+      Cấp dữ liệu thông tin nền cho AI đọc <br> (Knowledge Documents)
+      <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:14px; margin-top:8px;">
+        <input type="checkbox" id="ragEnableCheckbox" style="width: 18px; height: 18px;"> BẬT GẮN GỞI 
+      </label>
+    </h3>
+    <div class="rag-doc-list" id="ragDocList"></div>
+    <input type="file" id="ragFileInput" accept=".txt, .md" style="display:none;" multiple>
+    
+    <button class="btn btn-secondary" id="addRagDocBtn">Thêm một văn bản (*.txt, *.md)</button>
+    <button class="btn btn-primary" onclick="document.getElementById('ragModal').classList.remove('active')">Đóng Màn Bảng Quản Lý File Tĩnh R.A.G Trả</button>
+  </div>
+</div>
+
+<script>
+  (function(){
+    let conversations =[], activeConvId = null, isGenerating = false, abortController = null;
+    let currentStatusIndicator = null;
+    
+    let GOOGLE_API_KEY = localStorage.getItem('google_api_key') || '';
+    let SELECTED_MODEL = localStorage.getItem('google_model') || 'gemma-4-31b-it';
+    let TEMPERATURE = parseFloat(localStorage.getItem('google_temperature') || '0.7');
+    let ENABLE_GOOGLE_SEARCH = localStorage.getItem('enable_google_search') === 'true';
+    let KNOWLEDGE_BASE =[];
+    let RAG_ENABLED = localStorage.getItem('rag_enabled') !== 'false';
+    
+    const dom = {
+      msgs: document.getElementById('messagesContainer'), input: document.getElementById('messageInput'),
+      send: document.getElementById('sendBtn'), settings: document.getElementById('settingsModal'),
+      sidebar: document.getElementById('sidebar'), overlay: document.getElementById('mobileOverlay'),
+      kbBadge: document.getElementById('kbBadge'), ragModal: document.getElementById('ragModal'),
+      ragList: document.getElementById('ragDocList'), ragStatus: document.getElementById('ragActiveIndicator')
+    };
+
+    marked.setOptions({ breaks: true, gfm: true });
+    const escapeHtml = t => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+    const uuid = () => Math.random().toString(36).substr(2, 9);
+    
+    function loadKnowledgeBase() {
+      try { const db = localStorage.getItem('rag_kb_storage'); if(db) KNOWLEDGE_BASE = JSON.parse(db); } catch(e) { KNOWLEDGE_BASE =[]; }
+      updateRagUI();
+    }
+    
+    function saveKnowledgeBase() {
+      try { localStorage.setItem('rag_kb_storage', JSON.stringify(KNOWLEDGE_BASE)); } catch(e) {}
+      updateRagUI();
+    }
+
+    function updateRagUI() {
+      dom.kbBadge.innerText = KNOWLEDGE_BASE.length;
+      document.getElementById('ragEnableCheckbox').checked = RAG_ENABLED;
+      dom.ragStatus.style.display = (RAG_ENABLED && KNOWLEDGE_BASE.length > 0) ? 'inline-block' : 'none';
+      dom.ragList.innerHTML = '';
+      if(!KNOWLEDGE_BASE.length) { dom.ragList.innerHTML = `<div style="text-align:center; padding:15px; font-size:14px; color:gray;">Trống. Mời gắn thư tịch (.txt) nội bộ của riêng máy thiết bị của máy. AI mới gọi dựa đọc chuẩn và lưu.</div>`; return; }
+      KNOWLEDGE_BASE.forEach(doc => {
+        const item = document.createElement('div'); item.className = 'rag-doc-item';
+        item.innerHTML = `<div style="overflow:hidden; text-overflow:ellipsis;">📄 ${doc.name}</div>
+          <span style="color:#ef4444; padding:6px; cursor:pointer;" onclick="deleteKbDoc('${doc.id}')">✕ Lọc File Khỏi Ngàm Khẩu Nhớ</span>`;
+        dom.ragList.appendChild(item);
+      });
+    }
+
+    function addDocumentToKb(name, rawText) {
+      const words = rawText.split(/\s+/); const chunks = []; let temp =[]; let count = 0;
+      for(let w of words) {
+        temp.push(w); count += w.length;
+        if(count > 800) { chunks.push(temp.join(' ')); temp =[]; count = 0; }
+      }
+      if(temp.length) chunks.push(temp.join(' '));
+      KNOWLEDGE_BASE.push({ id: uuid(), name, chunks }); saveKnowledgeBase();
+    }
+    
+    window.deleteKbDoc = id => { KNOWLEDGE_BASE = KNOWLEDGE_BASE.filter(d => d.id !== id); saveKnowledgeBase(); };
+
+    function retrieveContextFor(query) {
+      if(!RAG_ENABLED || !KNOWLEDGE_BASE.length) return "";
+      const ignores = new Set(['có','thể','của','những','các','là','trong','và','đã','về','thì']);
+      const qWords = query.toLowerCase().split(/[^\p{L}0-9]+/u).filter(w => w.length > 1 && !ignores.has(w));
+      if(qWords.length === 0) return "";
+      
+      const hits =[];
+      for(const doc of KNOWLEDGE_BASE) {
+        for(let chTxt of doc.chunks) {
+          const chLower = chTxt.toLowerCase(); let score = 0;
+          for(const w of qWords) { if(chLower.includes(w)) score += 1; }
+          if(score >= Math.min(2, qWords.length)) hits.push({ chunk: chTxt, source: doc.name, score });
+        }
+      }
+      if(!hits.length) return "";
+      hits.sort((a,b) => b.score - a.score);
+      
+      let ext = `\n\n--- DỮ LIỆU ĐỌC KIỂM TRA THÔNG TIN ĐÃ NHỜ GIỮ TRƯỚC RAG (ĐÍNH MẤY NGỤ NGÔN TXT NGAY HẾT LOCAL LOCAL TRUY BẢO  CHỐNG TRÁNH KHẨU NGU)---\n`; 
+      hits.slice(0, 3).forEach(t => ext += `-[Văn thư ${t.source}]: ${t.chunk}\n`);
+      return ext;
+    }
+
+    document.getElementById('addRagDocBtn').onclick = () => document.getElementById('ragFileInput').click();
+    document.getElementById('ragFileInput').onchange = e => {
+      for(let f of e.target.files) {
+        const reader = new FileReader();
+        reader.onload = ev => { if(ev.target.result) addDocumentToKb(f.name, ev.target.result); }; reader.readAsText(f);
+      } e.target.value = ''; 
+    };
+    
+    document.getElementById('ragEnableCheckbox').onchange = e => { 
+        RAG_ENABLED = e.target.checked; localStorage.setItem('rag_enabled', RAG_ENABLED); updateRagUI(); 
+    };
+
+    function loadConversations() {
+      const saved = localStorage.getItem('gemma_pro_chats'); 
+      if(saved) try { conversations = JSON.parse(saved); } catch(e){}
+      
+      if(!conversations.length) conversations.push({ id: uuid(), name: 'Tin Trú Bản Chính AI Hội Nhóm  ', messages:[], createdAt: Date.now() });
+      activeConvId = localStorage.getItem('gemma_pro_active') || conversations[0].id;
+      if(!getActiveConv()) activeConvId = conversations[0].id;
+      loadKnowledgeBase(); saveAndRender();
+    }
+    
+    function saveConversations() { 
+        localStorage.setItem('gemma_pro_chats', JSON.stringify(conversations)); 
+        localStorage.setItem('gemma_pro_active', activeConvId); 
+    }
+    
+    const getActiveConv = () => conversations.find(c=>c.id===activeConvId);
+    
+    function saveAndRender() { saveConversations(); renderSidebar(); renderMessages(); }
+
+    function renderSidebar() {
+      const list = document.getElementById('conversationList'); list.innerHTML = '';
+      conversations.forEach(c => {
+        const el = document.createElement('div'); el.className = `conv-item ${c.id === activeConvId ? 'active' : ''}`;
+        el.innerHTML = `<span>💬</span><span class="conv-title">${escapeHtml(c.name)}</span>`;
+        el.onclick = () => { activeConvId = c.id; saveAndRender(); toggleSidebar(false); };
+        list.appendChild(el);
+      });
+      document.getElementById('chatTitleDisplay').textContent = getActiveConv().name;
+    }
+
+    // FUNCTION DÒ TÌM NHỐT THẺ QUÁ TRÌNH KHẨU THẾ <think> SÁNG KIẾN DỘI TÚI THEO CHUẨN KÈ CỮ RÁ ĐO CHIỀU HTML HÔI ỔN ! TÙ VÙ.
+    function parseMessageContent(text) {
+        let thinkText = ""; 
+        let finalAnswer = text;
+        const startIndex = text.indexOf("<think>");
+        
+        if (startIndex !== -1) {
+            const endIndex = text.indexOf("</think>");
+            if (endIndex !== -1) {
+                const beforeThink = text.substring(0, startIndex).trim();
+                thinkText = text.substring(startIndex + 7, endIndex).trim();
+                const afterThink = text.substring(endIndex + 8).trim();
+                finalAnswer =[beforeThink, afterThink].filter(t => t.length > 0).join('\n\n');
+            } else {
+                const beforeThink = text.substring(0, startIndex).trim();
+                thinkText = text.substring(startIndex + 7).trim();
+                finalAnswer = beforeThink;
+            }
+        }
+
+        let outputHTML = "";
+        
+        if (thinkText.length > 0) {
+            outputHTML += `
+            <details class="think-box">
+                <summary>🧠 Theo dõi dòng lý luận...</summary>
+                <div class="think-content">${marked.parse(thinkText)}</div>
+            </details>`;
+        }
+        
+        if (finalAnswer.length > 0) {
+            try { outputHTML += `${marked.parse(finalAnswer)}`; } 
+            catch(e) { outputHTML += `${escapeHtml(finalAnswer).replace(/\n/g, '<br>')}`; }
+        }
+
+        return outputHTML;
+    }
+
+    function renderMessages() {
+      const conv = getActiveConv(); dom.msgs.innerHTML = '';
+      
+      if(!conv.messages.length) { 
+          dom.msgs.innerHTML = `<div style="text-align:center; color:#64748b; margin-top:30%; font-size:15px; line-height: 1.6;">
+            <div style="font-size:30px; margin-bottom: 12px;">👋</div>
+            <h2 style="color:#e2e8f0; font-size:18px;">Giao diện Đóng Bảng Mobile Tinh Chuyên Nhã Cho 4G Lát Ngon Bịch Nhất !!! Tịch !  !! Đỡ Đã AI Cho AI Gói Mới Gài Tiên Thiết 16 Nhã API Nắm!!! NỘI CHIẾN Nhan !!!</h2><br/>Hãy gửi lời thoại gì tới Cụ Nhá Nén!! Chức. Nhan.. Trực Giảm Sốc Không Tháo Khớp Code Web Ngạch.. Vui !! Vô Cù Hào!!! Gói!
+          </div>`; 
+          return; 
+      }
+
+      for(let m of conv.messages) {
+        const out = document.createElement('div'); out.className = `message ${m.role}`;
+        out.innerHTML = `<div class="avatar">${m.role==='user'?'👤':'AI'}</div>`;
+        const bub = document.createElement('div'); bub.className = 'bubble';
+        
+        if(m.role === 'user') bub.innerHTML = escapeHtml(m.content).replace(/\n/g, '<br>'); 
+        else bub.innerHTML = parseMessageContent(m.content);
+        
+        if(m.attachments) {
+            m.attachments.forEach(a => { if(a.type.startsWith('image/')) bub.innerHTML += `<img class="media-thumbnail" src="${a.dataUrl}">`; });
+        }
+        
+        out.appendChild(bub); dom.msgs.appendChild(out);
+      }
+      setTimeout(() => { dom.msgs.scrollTop = dom.msgs.scrollHeight; }, 10);
+    }
+
+    const toggleSidebar = (b) => { 
+        dom.sidebar.classList.toggle('open', b); 
+        dom.overlay.classList.toggle('active', b); 
+    };
+    
+    document.getElementById('menuToggle').onclick = () => toggleSidebar(true);
+    dom.overlay.onclick = () => toggleSidebar(false);
+    
+    // Gõ đến đâu nới cao thanh lên chút chống zoom gõ dài (cầm cứng bằng kích chữ mobile chuẩn >16p iOS đấm)
+    dom.input.addEventListener('input', function() { 
+        this.style.height = '42px'; 
+        const h = this.scrollHeight; 
+        this.style.height = (h < 120 ? h : 120) + 'px';
+    });
+
+    const showStatus = txt => {
+      if(currentStatusIndicator) currentStatusIndicator.remove();
+      const st = document.createElement('div'); st.className = 'status-indicator';
+      st.innerHTML = `<span>${txt}</span><div class="dot-flashing"><span></span><span></span><span></span></div>`;
+      dom.msgs.appendChild(st); 
+      currentStatusIndicator = st; 
+      dom.msgs.scrollTop = dom.msgs.scrollHeight;
+    };
+
+    async function sendMessage() {
+      const text = dom.input.value.trim(); const conv = getActiveConv(); if(!conv) return;
+      const fileEl = document.getElementById('file-input'); const filesArr = Array.from(fileEl.files);
+      
+      let attachmentsData = null;
+      if(filesArr.length > 0) { 
+          attachmentsData =[]; 
+          for(let fx of filesArr) {
+              const data = await new Promise(rs => { const r=new FileReader(); r.onload=e=>rs(e.target.result); r.readAsDataURL(fx); });
+              attachmentsData.push({ type: fx.type, dataUrl: data });
+          }
+      }
+      
+      if(!text && !attachmentsData) return;
+      
+      if(!GOOGLE_API_KEY) { dom.settings.classList.add('active'); toggleSidebar(false); return; }
+
+      conv.messages.push({ role:'user', content:text, attachments: attachmentsData });
+      
+      dom.input.value = ''; dom.input.style.height = '42px'; fileEl.value=''; 
+      dom.input.blur(); 
+      saveAndRender(); showStatus('Đang tổng hợp thông tin, soạn nhã thư ... ...');
+      
+      let injection = RAG_ENABLED ? retrieveContextFor(text) : "";
+      
+      const msgsForApi = conv.messages.map(m => {
+        let tText = m.content;
+        // Bơm ngữ liệu bí kíp cá nhân txt trước câu hỏi lần bắn vào API 
+        if(m.role === 'user' && injection && m === conv.messages[conv.messages.length -1]) {
+            tText = `${tText}\n\n${injection}`;
+        }
+        
+        return { 
+            role: m.role==='user'?'user':'model', 
+            parts:[ ...(tText?[{text:tText}]:[]), ...(m.attachments||[]).map(a=>({inline_data:{mime_type:a.type, data:a.dataUrl.split(',')[1]}}))] 
+        }
+      });
+
+      const bodyData = { 
+        contents: msgsForApi,
+        generationConfig: { temperature: TEMPERATURE, maxOutputTokens: 6000 } 
+      };
+      
+      if(ENABLE_GOOGLE_SEARCH) bodyData.tools = [{google_search:{}}];
+
+      dom.send.disabled = true; isGenerating = true; abortController = new AbortController();
+      
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${SELECTED_MODEL}:streamGenerateContent?alt=sse&key=${GOOGLE_API_KEY}`, { 
+            method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(bodyData), signal: abortController.signal
+        });
+        
+        if(!res.ok) {
+           let eStr = await res.text();
+           throw new Error(eStr.substring(0, 50)); 
+        }
+
+        let fOut = ''; const rd = res.body.getReader(), dc = new TextDecoder();
+        
+        if(currentStatusIndicator) currentStatusIndicator.remove();
+        
+        conv.messages.push({ role:'assistant', content: '' }); 
+        let assistantMsgIndex = conv.messages.length - 1; let buffer = '';
+        
+        while(true) {
+          const {done, value} = await rd.read(); if(done) break;
+          buffer += dc.decode(value, {stream: true}); let lines = buffer.split('\n'); buffer = lines.pop(); 
+          
+          for(let L of lines) {
+            if(!L.startsWith('data: ')) continue;
+            let jd = L.slice(6).trim(); if(jd==='[DONE]') continue;
+            try { 
+                const jt = JSON.parse(jd).candidates?.[0]?.content?.parts?.[0]?.text; 
+                if(jt) { 
+                    fOut += jt; 
+                    conv.messages[assistantMsgIndex].content = fOut; 
+                    renderMessages(); 
+                } 
+            } catch(e) {}
+          }
+        }
+        saveConversations(); 
+      } catch(err) {
+        if(currentStatusIndicator) currentStatusIndicator.remove();
+        if(err.name !== 'AbortError') alert("Phát sinh rủi do Lỗi Trình Duyệt:  " + err.message);
+      } finally { dom.send.disabled = false; isGenerating = false; abortController = null; }
+    }
+
+    dom.send.onclick = () => { isGenerating ? abortController?.abort() : sendMessage() };
+    
+    dom.input.addEventListener('keydown', (e) => { 
+        if (e.key === 'Enter' && !e.shiftKey) { 
+            e.preventDefault(); 
+            // Fix bug trên Mobile Enter đôi lúc khựt
+            setTimeout(() => {dom.send.click();}, 50); 
+        } 
+    });
+    
+    document.getElementById('attachBtn').onclick = () => document.getElementById('file-input').click();
+    
+    document.getElementById('newChatBtn').onclick = () => { 
+        const c = {id: uuid(), name:'Nhóm Hỏi Máy Thiết Bi  Mới '+(conversations.length+1), messages:[], createdAt:Date.now()}; 
+        conversations.unshift(c); activeConvId=c.id; saveAndRender(); toggleSidebar(false); 
+    };
+    
+    document.getElementById('editTitleBtn').onclick = () => { 
+        const c = getActiveConv(); const tn = prompt("Chính lại nội lưu hội chat đề xuất riêng đây :", c.name); 
+        if(tn) { c.name = tn.trim(); saveAndRender(); } 
+    };
+    
+    document.getElementById('deleteChatBtn').onclick = () => { 
+        if(conversations.length <= 1) return; 
+        if(confirm('Chắc Chắn Đứt Mã Kho Lưu Hội Thoại? Vui ! Cấp Trụ Bản App Rào Phái Bị Mới. Hoàn Xóa Nguồn Cứt Chức! Cọp Kèm Trắng!! Lát Vòng !!?? Nhá Ráng.. ? ')) { 
+            conversations = conversations.filter(c => c.id !== activeConvId); 
+            activeConvId = conversations[0].id; saveAndRender(); 
+        } 
+    }
+    
+    document.getElementById('settingsBtn').onclick = () => {
+        document.getElementById('apiKeyInput').value = GOOGLE_API_KEY; 
+        document.getElementById('modelSelect').value = SELECTED_MODEL;
+        document.getElementById('temperatureRange').value = TEMPERATURE; 
+        document.getElementById('tempValue').innerText = TEMPERATURE;
+        document.getElementById('googleSearchCheckbox').checked = ENABLE_GOOGLE_SEARCH; 
+        dom.settings.classList.add('active'); toggleSidebar(false);
+    };
+    
+    document.getElementById('temperatureRange').oninput = e => document.getElementById('tempValue').innerText = e.target.value;
+    
+    document.getElementById('saveSettingsBtn').onclick = () => {
+        GOOGLE_API_KEY = document.getElementById('apiKeyInput').value; 
+        SELECTED_MODEL = document.getElementById('modelSelect').value;
+        TEMPERATURE = parseFloat(document.getElementById('temperatureRange').value); 
+        ENABLE_GOOGLE_SEARCH = document.getElementById('googleSearchCheckbox').checked;
+        localStorage.setItem('google_api_key', GOOGLE_API_KEY); 
+        localStorage.setItem('google_model', SELECTED_MODEL);
+        localStorage.setItem('google_temperature', TEMPERATURE); 
+        localStorage.setItem('enable_google_search', ENABLE_GOOGLE_SEARCH);
+        dom.settings.classList.remove('active');
+    }
+
+    document.getElementById('exportDataBtn').onclick = () => {
+        const backupData = { chats: conversations, rag_kb: KNOWLEDGE_BASE, settings: { model: SELECTED_MODEL, temp: TEMPERATURE, search: ENABLE_GOOGLE_SEARCH }};
+        const blob = new Blob([JSON.stringify(backupData)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob); 
+        const a = document.createElement('a'); a.href = url; a.download = 'Hoan_Cau_Tiet_API_AppChatClient14PrcgAIOg_JSONBackXucHachVongLuatGemmaVIP10xKhuanDocThichP24NhG.json'; 
+        a.click();
+    };
+
+    document.getElementById('importDataBtn').onclick = () => document.getElementById('importFileInput').click();
+    
+    document.getElementById('importFileInput').onchange = (e) => {
+        const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if(data.chats) { 
+                    conversations = data.chats; localStorage.setItem('gemma_pro_chats', JSON.stringify(conversations)); 
+                    activeConvId = conversations[0].id; localStorage.setItem('gemma_pro_active', activeConvId); 
+                }
+                if(data.rag_kb) { 
+                    KNOWLEDGE_BASE = data.rag_kb; localStorage.setItem('rag_kb_storage', JSON.stringify(KNOWLEDGE_BASE)); 
+                }
+                alert("Nuốt Lạp Hệ Hoàn Toàn 100%! Căn Thông Đặt Toán Lệnh Vào Rốn Lớn Gợi JSON ! Phục Cứu  (Vừa Làm Làm Cho To) ! Máy !!   Xí ! Mượt Gói Nhan ! Load !"); 
+                location.reload();
+            } catch(err) { alert("Tráo Bịp Kẻ Sai Code Dài ! Hết Dâm Khung Phụ Thấu !! File Lậu Rở !! Rát Code  ! Múc Phận!"); }
+        };
+        reader.readAsText(file);
+    };
+
+    document.getElementById('ragManagerBtn').onclick = () => { dom.ragModal.classList.add('active'); toggleSidebar(false); updateRagUI(); };
+    loadConversations();
+  })();
+</script>
+</body>
+</html>
